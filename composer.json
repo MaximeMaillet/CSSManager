@@ -1,0 +1,17 @@
+{
+    "name": "2max/cssmanager",
+    "description": "A CSS Manager in PHP",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Maxime Maillet",
+            "email": "maxime.maillet93@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+      "psr-4" : {"M2Max\\" : "src"}
+    },
+    "require": {}
+}
