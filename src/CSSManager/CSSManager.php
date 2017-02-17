@@ -102,7 +102,7 @@ namespace M2Max\CSSManager;
  	}
 
  	private function addCssContent($css) {
- 		$this->cssContent = $css;
+ 		$this->cssContent .= $css;
  	}
 
  	public function getURL() {
@@ -116,7 +116,6 @@ namespace M2Max\CSSManager;
  	public static function init($array_css_files) {
  		if(self::$instance == null)
  			self::$instance = new CSSManager($array_css_files);
- 		return self::link();
  	}
 
  	public static function link() {
