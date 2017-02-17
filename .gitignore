@@ -1,5 +1,5 @@
 .idea/
 tests/
 vendor/
-src/CSSManager/cache.json
+src/cache.json
 composer.lock

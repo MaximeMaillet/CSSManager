@@ -12,6 +12,5 @@
     "minimum-stability": "alpha",
     "autoload": {
       "psr-4" : {"M2Max\\" : "src"}
-    },
-    "require": {}
+    }
 }

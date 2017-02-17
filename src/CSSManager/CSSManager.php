@@ -16,6 +16,7 @@ namespace M2Max\CSSManager;
  	private $root_url;
  	private $cssContent;
  	private $current_cache_timestamp = 0;
+	private $array_css_files;
 
  	/**
  	* @var string
@@ -36,24 +37,38 @@ namespace M2Max\CSSManager;
  	private function __construct($array_css_files) {
  		$this->root_path = dirname($_SERVER['SCRIPT_FILENAME']).'/';
  		$this->root_url = dirname($_SERVER['SCRIPT_NAME']).'/';
-
- 		if(!$this->cacheActive()) {
- 			foreach ($array_css_files as $file) {
- 				if(is_string($file)) {
- 					$this->addCssContent(file_get_contents($this->root_path.$file));
- 				}
- 			}
-
- 			if(!file_exists($this->root_path.'public/')) {
- 				if(!mkdir($this->root_path.'public/')) {
- 					throw new \Exception('Unable to create directory, check permissions');
- 				}
- 			}
-
- 			file_put_contents($this->root_path.self::$CSS_DESTINATION_PATH, $this->cssContent);
- 			$this->activeCache();
- 		}
+		$this->array_css_files = $array_css_files;
+			if(!$this->cacheActive()) {
+	 			$this->loadLocal();
+				$this->activeCache();
+	 		}
  	}
+
+	private function loadLocal() {
+
+		if(in_array(PHP_OS, ['WIN', 'WINNT'])) {
+			$this->root_path = str_replace('/', '\\', $this->root_path);
+		}
+
+		foreach ($this->array_css_files as $file) {
+			if(is_string($file)) {
+				if(strpos($file, $this->root_path) !== false) {
+					$this->addCssContent(file_get_contents($file));
+				}
+				else {
+					$this->addCssContent(file_get_contents($this->root_path.$file));
+				}
+			}
+		}
+
+		if(!file_exists($this->root_path.'public/')) {
+			if(!mkdir($this->root_path.'public/')) {
+				throw new \Exception('Unable to create directory, check permissions');
+			}
+		}
+
+		file_put_contents($this->root_path.self::$CSS_DESTINATION_PATH, $this->cssContent);
+	}
 
  	private function activeCache() {
  		$cache_file = dirname(__DIR__).'/cache.json';
@@ -114,4 +129,23 @@ namespace M2Max\CSSManager;
  			throw new \Exception('Unable to remove cache file, check write permissions');
  		}
  	}
+
+	public static function picture($path) {
+		if(self::$instance == null)
+			throw new \Exception('CSSManager are not instanciated');
+
+			echo self::$instance->root_url.$path;
+	}
+
+	public static function importBefore(IKant $kant) {
+		//var_dump($kant);
+	}
+
+	public static function importAfter(IKant $kant) {
+		if(self::$instance == null)
+			throw new \Exception('CSSManager are not instanciated');
+
+		self::$instance->addKant($kant);
+		self::$instance->loadLocal();
+	}
  }
