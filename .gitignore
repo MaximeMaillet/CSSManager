@@ -2,3 +2,4 @@
 tests/
 vendor/
 src/CSSManager/cache.json
+composer.lock

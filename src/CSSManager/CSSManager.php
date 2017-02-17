@@ -28,6 +28,11 @@ namespace M2Max\CSSManager;
  	*/
  	public static $CACHE_TIMESTAMP = 60*60*24*60;
 
+	/**
+	* @var string
+	*/
+	public static $ENVIRONMENT = null;
+
  	private function __construct($array_css_files) {
  		$this->root_path = dirname($_SERVER['SCRIPT_FILENAME']).'/';
  		$this->root_url = dirname($_SERVER['SCRIPT_NAME']).'/';
@@ -61,6 +66,13 @@ namespace M2Max\CSSManager;
  	}
 
  	private function cacheActive() {
+		if(self::$ENVIRONMENT !== null  && strtolower(self::$ENVIRONMENT) == 'dev') {
+			return false;
+		}
+		elseif(self::$ENVIRONMENT === null && defined('ENVIRONMENT') && strtolower(ENVIRONMENT) == 'dev') {
+			return false;
+		}
+
  		$cache_file = dirname(__DIR__).'/cache.json';
  		if(file_exists($cache_file)) {
  			$cache = json_decode(file_get_contents($cache_file), true);
