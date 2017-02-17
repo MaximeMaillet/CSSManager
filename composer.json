@@ -9,7 +9,7 @@
             "email": "maxime.maillet93@gmail.com"
         }
     ],
-    "minimum-stability": "dev",
+    "minimum-stability": "alpha",
     "autoload": {
       "psr-4" : {"M2Max\\" : "src"}
     },
