@@ -28,7 +28,12 @@ class CSSManager
 	/**
 	 * @var string
 	 */
-	private $cssContent;
+	private $cssContent = null;
+
+	/**
+	 * @var string
+	 */
+	private $jsContent = null;
 
 	/**
 	 * @var int
@@ -41,9 +46,15 @@ class CSSManager
 	private $array_css_files = [];
 
 	/**
+	 * @var array
+	 */
+	private $array_js_files = [];
+
+	/**
 	 * @var string
 	 */
 	public static $CSS_DESTINATION_PATH = 'public/main.all.css';
+	public static $JS_DESTINATION_PATH = 'public/main.all.js';
 
 	/**
 	 * 60 days
@@ -75,11 +86,67 @@ class CSSManager
 	}
 
 	/**
+	 * Put CSS content (param) in one CSS file
+	 * @param $css
+	 */
+	private function addCssContent($css) {
+		$this->cssContent .= $css;
+	}
+
+	/**
+	 * Put JS content (param) in one JS file
+	 * @param $js
+	 */
+	private function addJsContent($js) {
+		$this->jsContent .= $js;
+	}
+
+	private function clearJsContent() {
+		$this->jsContent = '';
+	}
+
+	private function clearCssContent() {
+		$this->cssContent = '';
+	}
+
+	/**
 	 * Add CSS file to array
 	 * @param string $css_file
 	 */
-	private function addFile($css_file) {
+	private function addCssFile($css_file) {
 		array_push($this->array_css_files, $css_file);
+		$this->deduplicate();
+	}
+
+	/**
+	 * Add JS file to array
+	 * @param string $js_file
+	 */
+	private function addJsFile($js_file) {
+		array_push($this->array_js_files, $js_file);
+		$this->deduplicate();
+	}
+
+	/**
+	 * List array of file and deduplicate
+	 */
+	private function deduplicate() {
+		$array_temp_css = [];
+		foreach ($this->array_css_files as $file) {
+			if(!in_array($file, $array_temp_css))
+				$array_temp_css[] = $file;
+		}
+		$this->array_css_files = $array_temp_css;
+		unset($array_temp_css);
+
+		$array_temp_js = [];
+		foreach ($this->array_js_files as $file) {
+			if(!in_array($file, $array_temp_js)) {
+				$array_temp_js[] = $file;
+			}
+		}
+		$this->array_js_files = $array_temp_js;
+		unset($array_temp_js);
 	}
 
 	/**
@@ -88,22 +155,33 @@ class CSSManager
 	 * @throws \Exception
 	 */
 	private function addKant(IKant $kant) {
-		$array_kant = $kant->get();
+		$array_css_kant = $kant->css();
+		$array_js_kant = $kant->js();
 
-		if(!is_array($array_kant)) {
-			throw new \Exception('IKant->get() must return an array');
+		if(!is_array($array_css_kant)) {
+			throw new \Exception('IKant->css() must return an array');
 		}
 
-		foreach ($array_kant as $file)
-			$this->addCssContent(file_get_contents($file));
+		if(!is_array($array_js_kant)) {
+			throw new \Exception('IKant->js() must return an array');
+		}
+
+		foreach ($array_css_kant as $file) {
+			$this->addCssFile($file);
+		}
+
+		foreach ($array_js_kant as $file) {
+			$this->addJsFile($file);
+		}
 	}
 
 	/**
-	 * Put CSS content (param) with other CSS
-	 * @param $css
+	 * Load JS and CSS files
+	 * @throws \Exception
 	 */
-	private function addCssContent($css) {
-		$this->cssContent .= $css;
+	private function load() {
+		$this->loadCSS();
+		$this->loadJS();
 	}
 
 	/**
@@ -112,22 +190,47 @@ class CSSManager
 	private function loadCSS() {
 
 		if(!$this->isCacheActive()) {
+			$this->clearCssContent();
 			foreach ($this->array_css_files as $file) {
-				if(strpos($file, $this->root_path) !== false) {
-					if(!file_exists($file))
-						throw new \Exception('This file does not exists ('.$file.')');
 
-					$this->addCssContent(file_get_contents($file));
-				}
-				else {
-					if(!file_exists($this->root_path.$file))
-						throw new \Exception('This file does not exists ('.$this->root_path.$file.')');
+				if(strpos($file, $this->root_path) !== false)
+					$current_file = $file;
+				else
+					$current_file = $this->root_path.$file;
 
-					$this->addCssContent(file_get_contents($this->root_path.$file));
-				}
+				if(!file_exists($current_file))
+					throw new \Exception('This file does not exists ('.$current_file.')');
+
+				$this->addCssContent(file_get_contents($current_file));
 			}
 
 			file_put_contents($this->root_path.self::$CSS_DESTINATION_PATH, $this->cssContent);
+
+			$this->saveCache();
+		}
+	}
+
+	/**
+	 * Load file and write js in new file
+	 */
+	private function loadJS() {
+
+		if(!$this->isCacheActive()) {
+			$this->clearJsContent();
+			foreach ($this->array_js_files as $file) {
+
+				if(strpos($file, $this->root_path) !== false)
+					$current_file = $file;
+				else
+					$current_file = $this->root_path.$file;
+
+				if(!file_exists($current_file))
+					throw new \Exception('This file does not exists ('.$current_file.')');
+
+				$this->addJsContent(file_get_contents($current_file));
+			}
+
+			file_put_contents($this->root_path.self::$JS_DESTINATION_PATH, $this->jsContent);
 
 			$this->saveCache();
 		}
@@ -168,8 +271,14 @@ class CSSManager
 		$cache_file = dirname(__DIR__).'/cache.json';
 		if(!file_exists($cache_file)) {
 			file_put_contents($cache_file, json_encode([
-				"url" => $this->root_path.self::$CSS_DESTINATION_PATH,
-				"timestamp" => time()+self::$CACHE_TIMESTAMP
+				'css' => [
+					"url" => $this->root_path.self::$CSS_DESTINATION_PATH,
+					"timestamp" => time()+self::$CACHE_TIMESTAMP
+				],
+				'js' => [
+					"url" => $this->root_path.self::$JS_DESTINATION_PATH,
+					"timestamp" => time()+self::$CACHE_TIMESTAMP
+				]
 			]));
 		}
 	}
@@ -178,8 +287,11 @@ class CSSManager
 	 * Return url of main CSS files
 	 * @return string
 	 */
-	public function getURL() {
-		return $this->root_url.self::$CSS_DESTINATION_PATH;
+	public function getURLs() {
+		return [
+			'css' => $this->root_url.self::$CSS_DESTINATION_PATH,
+			'js' => $this->root_url.self::$JS_DESTINATION_PATH
+		];
 	}
 
 	/**
@@ -208,7 +320,7 @@ class CSSManager
 	public static function import(IKant $kant) {
 		$instance = self::getInstance();
 		$instance->addKant($kant);
-		$instance->loadCSS();
+		$instance->load();
 	}
 
 	public static function importMultiple($array_kants) {
@@ -231,19 +343,35 @@ class CSSManager
 	 * Add array of CSS file to Manager
 	 * @param $array_css_files
 	 */
-	public static function add($array_css_files) {
+	public static function addCss($array_css_files) {
 		$instance = self::getInstance();
 
 		foreach ($array_css_files as $file)
-			$instance->addFile($file);
+			$instance->addCssFile($file);
+
 		$instance->loadCSS();
+	}
+
+	/**
+	 * Add array of JS file to Manager
+	 * @param $array_js_files
+	 */
+	public static function addJs($array_js_files) {
+		$instance = self::getInstance();
+
+		foreach ($array_js_files as $file)
+			$instance->addJsFile($file);
+
+		$instance->loadJS();
 	}
 
 	/**
 	 * Include links CSS and JS
 	 */
 	public static function link() {
-		echo '<link rel="stylesheet" href="'.self::$instance->getURL().'?'.self::$instance->getCurrentCacheTimestamp().'" />';
+		$urls = self::$instance->getURLs();
+		echo '<link rel="stylesheet" href="'.$urls['css'].'?'.self::$instance->getCurrentCacheTimestamp().'" />';
+		echo '<script type="text/javascript" src="'.$urls['js'].'?'.self::$instance->getCurrentCacheTimestamp().'"></script>';
 	}
 
 	/**
