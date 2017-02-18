@@ -20,5 +20,6 @@ abstract class IKant
 
     public abstract static function Kanter();
     public abstract static function generate($data);
-    public abstract function get();
+    public abstract function css();
+    public abstract function js();
 }
