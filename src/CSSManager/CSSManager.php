@@ -85,11 +85,16 @@ class CSSManager
 	/**
 	 * Add Kant interface to array
 	 * @param IKant $kant
+	 * @throws \Exception
 	 */
 	private function addKant(IKant $kant) {
-		$array_kants = $kant->get();
+		$array_kant = $kant->get();
 
-		foreach ($array_kants as $file)
+		if(!is_array($array_kant)) {
+			throw new \Exception('IKant->get() must return an array');
+		}
+
+		foreach ($array_kant as $file)
 			$this->addCssContent(file_get_contents($file));
 	}
 
@@ -106,7 +111,7 @@ class CSSManager
 	 */
 	private function loadCSS() {
 
-		if($this->isCacheActive()) {
+		if(!$this->isCacheActive()) {
 			foreach ($this->array_css_files as $file) {
 				if(strpos($file, $this->root_path) !== false) {
 					$this->addCssContent(file_get_contents($file));
@@ -179,7 +184,6 @@ class CSSManager
 		return $this->current_cache_timestamp;
 	}
 
-
 	/**
 	 * Return instance of CSSManager
 	 * @return CSSManager|null
@@ -197,16 +201,9 @@ class CSSManager
 	 */
 	public static function import(IKant $kant) {
 		$instance = self::getInstance();
-		$array_kant = $kant->get();
-
-		if(!is_array($array_kant)) {
-			throw new \Exception('IKant->get() must return an array');
-		}
-
-		foreach ($array_kant as $file)
-			$instance->addFile($file);
+		$instance->addKant($kant);
+		$instance->loadCSS();
 	}
-
 
 	public static function importMultiple($array_kants) {
 		$instance = self::getInstance();
