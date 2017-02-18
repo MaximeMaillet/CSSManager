@@ -114,9 +114,15 @@ class CSSManager
 		if(!$this->isCacheActive()) {
 			foreach ($this->array_css_files as $file) {
 				if(strpos($file, $this->root_path) !== false) {
+					if(!file_exists($file))
+						throw new \Exception('This file does not exists ('.$file.')');
+
 					$this->addCssContent(file_get_contents($file));
 				}
 				else {
+					if(!file_exists($this->root_path.$file))
+						throw new \Exception('This file does not exists ('.$this->root_path.$file.')');
+
 					$this->addCssContent(file_get_contents($this->root_path.$file));
 				}
 			}
